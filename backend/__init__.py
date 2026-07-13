@@ -1,1 +1,1 @@
-# Package marker
+"""Sentinel AI - Backend Package."""
