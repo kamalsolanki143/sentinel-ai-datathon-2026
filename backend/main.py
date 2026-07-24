@@ -4,7 +4,7 @@ File: backend/main.py
 Purpose: FastAPI entry point. Configures routers, CORS, exception handling,
          logging, and application startup/shutdown events.
 
-Dependencies: fastapi, uvicorn, loguru
+Dependencies: fastapi, uvicorn, loguru, backend.api.*, backend.database.*
 """
 
 from contextlib import asynccontextmanager
@@ -18,6 +18,8 @@ from loguru import logger
 from backend.config.settings import get_settings
 from backend.config.config import APP_METADATA
 from backend.config.logging_config import setup_logging
+from backend.database.postgres import init_postgres_db
+from backend.database.neo4j import close_neo4j_driver
 
 # Load settings
 settings = get_settings()
@@ -31,9 +33,8 @@ async def lifespan(app: FastAPI):
     setup_logging()
     logger.info(f"Starting {settings.APP_NAME} in {settings.ENVIRONMENT} mode...")
     
-    # Connect to databases (Neo4j, Postgres, etc.)
-    # Example: await neo4j_service.connect()
-    # Example: await postgres_service.connect()
+    # Initialize Databases
+    await init_postgres_db()
     
     logger.info("Sentinel AI Core Systems initialized successfully.")
     
@@ -41,9 +42,7 @@ async def lifespan(app: FastAPI):
     
     # --- Shutdown ---
     logger.info("Shutting down Sentinel AI Core Systems...")
-    # Close database connections
-    # Example: await neo4j_service.close()
-    # Example: await postgres_service.close()
+    await close_neo4j_driver()
     logger.info("Shutdown complete.")
 
 def create_app() -> FastAPI:
@@ -81,19 +80,32 @@ def create_app() -> FastAPI:
             },
         )
 
-    # Health Check Endpoint
+    # System Health Check Endpoint
     @app.get("/health", tags=["System"])
     async def health_check() -> dict[str, Any]:
         """Simple health check endpoint to verify API is running."""
         return {
             "status": "healthy",
             "environment": settings.ENVIRONMENT,
-            "version": settings.APP_VERSION
+            "version": settings.APP_VERSION,
         }
 
-    # Register Routers (To be implemented in API package)
-    # from backend.api.chat import router as chat_router
-    # app.include_router(chat_router, prefix=settings.API_V1_STR)
+    # Register All Subsystem Routers under /api/v1
+    from backend.api.chat import router as chat_router
+    from backend.api.crimes import router as crimes_router
+    from backend.api.network import router as network_router
+    from backend.api.predictions import router as predictions_router
+    from backend.api.recommendations import router as recommendations_router
+    from backend.api.reports import router as reports_router
+    from backend.api.simulation import router as simulation_router
+
+    app.include_router(chat_router, prefix=settings.API_V1_STR)
+    app.include_router(crimes_router, prefix=settings.API_V1_STR)
+    app.include_router(network_router, prefix=settings.API_V1_STR)
+    app.include_router(predictions_router, prefix=settings.API_V1_STR)
+    app.include_router(recommendations_router, prefix=settings.API_V1_STR)
+    app.include_router(reports_router, prefix=settings.API_V1_STR)
+    app.include_router(simulation_router, prefix=settings.API_V1_STR)
 
     return app
 
