@@ -18,14 +18,10 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import declarative_base
-
 from backend.config.settings import get_settings
+from backend.database.models import Base
 
 settings = get_settings()
-
-# SQLAlchemy declarative base for models
-Base = declarative_base()
 
 
 class PostgresService:
