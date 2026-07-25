@@ -8,9 +8,11 @@ import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from backend.config import settings
+from backend.config.settings import get_settings
 from backend.database.postgres import get_db
 from backend.database.models import Officer, OfficerRole
+
+settings = get_settings()
 
 # OAuth2 scheme for token extraction
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)

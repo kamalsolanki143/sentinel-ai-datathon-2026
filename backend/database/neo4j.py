@@ -6,18 +6,32 @@ from neo4j import AsyncGraphDatabase
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from backend.config import settings
+from backend.config.settings import get_settings
 from backend.database.models import Criminal, FIR, Vehicle, PhoneNumber, KnownLocation, CriminalFIR
+
+settings = get_settings()
 
 class Neo4jService:
     def __init__(self):
-        self.driver = AsyncGraphDatabase.driver(
-            settings.NEO4J_URI,
-            auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
-        )
+        self._driver = None
+
+    @property
+    def driver(self):
+        if self._driver is None:
+            self._driver = AsyncGraphDatabase.driver(
+                settings.NEO4J_URI,
+                auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
+            )
+        return self._driver
 
     async def close(self) -> None:
-        await self.driver.close()
+        if getattr(self, "_driver", None) is not None:
+            try:
+                await self._driver.close()
+            except Exception:
+                pass
+            finally:
+                self._driver = None
 
     def _get_deterministic_uuid(self, value: str) -> str:
         """Helper to generate a consistent UUID from a string value (phone, license plate, location name)"""
@@ -697,4 +711,13 @@ class Neo4jService:
         return counters
 
 neo4j_service = Neo4jService()
+
+
+async def close_neo4j_driver() -> None:
+    """Close the Neo4j driver connection pool."""
+    await neo4j_service.close()
+
+
+__all__ = ["Neo4jService", "neo4j_service", "close_neo4j_driver"]
+
 
